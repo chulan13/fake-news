@@ -1,10 +1,13 @@
 #importing libraries
-from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np, pandas as pd, matplotlib as mlt
+import os
+import numpy as np, pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.metrics import accuracy_score
+
 
 #importing database
 dataset = pd.read_csv("fake-news/data_set_4.csv")
@@ -89,4 +92,43 @@ tfidfVectorizer = TfidfVectorizer(stop_words=stopwords,max_df=0.7,strip_accents=
 tfidf_train=tfidfVectorizer.fit_transform(x_train.values.astype('U')) 
 tfidf_test=tfidfVectorizer.transform(x_test.values.astype('U'))
 
-# PassiveAggressiveClassifier
+# PassiveAggressiveClassifier 
+'''
+Passive Aggressive Algorithms:
+    It's one of the 'online-learning algorithms', 
+    so the input data comes into sequential order and the machine learning model is updated step by step.
+    They're somewhat similar to a Perception model (do not require a learning rate).
+
+    Passive when prediction is correct (doesnt change anything)
+    Aggressive when prediction is incorrect (makes changes)
+
+            Important parameters:
+                    * C: the regularization parameter, 
+                    and denotes the penelization the model will make on an incorrect prediction.
+                    * max_iter
+                    * tol: the stopping criterion. 
+                    When set to None will stop when loss > prev_loss - tol (default 1e-3)
+
+    Math:
+        Training data (X,y) where 'X' represents TFIFD matrix and 'y' repr. corresponding target labels.
+        Weight vector 'w' - it's what Passive Aggressive alg tries to find.
+
+        The hinge loss: L(w) = max(0, 1 - y * (w^t * x)), 
+        where w^T - the traspose of the weight vector w, x is a feature vector, and y is the corresp. true label (-1 or 1).
+
+        The update rule when missclassification occures:
+                    w_new = w_old + (learning_rate * hinge_loss * x), 
+                    where learning_rate is a hyperparameter controlling the step size of the update,
+                    and x is a feature vector of the missclassified instance.
+
+        An upper bound or margin parameter C - to ensure the model doesnt overfit.
+                    w_new = w_old + (min(loss,C) * learning_rate * x)
+'''
+paclass=PassiveAggressiveClassifier(max_iter=50)
+paclass.fit(tfidf_train,y_train)
+
+
+y_pred=paclass.predict(tfidf_test)
+score=accuracy_score(y_test,y_pred)
+print(f'Accuracy: {round(score*100,2)}%')
+
