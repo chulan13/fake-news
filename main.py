@@ -1,12 +1,13 @@
 #importing libraries
 import os
-import numpy as np, pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np, pandas as pd, matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.linear_model import PassiveAggressiveClassifier, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 #importing database
@@ -88,7 +89,7 @@ TF-IDF = TF(t,d) * IDF(t),      where TF(t,d) is a number of times term 't' appe
                 where |{d : t є d}| is the number of documents where the term 't' appears, when TF(t,d) != 0
 '''
 
-tfidfVectorizer = TfidfVectorizer(stop_words=stopwords,max_df=0.7,strip_accents=None)
+tfidfVectorizer = TfidfVectorizer(stop_words=stopwords,max_df=0.8,strip_accents=None)
 tfidf_train=tfidfVectorizer.fit_transform(x_train.values.astype('U')) 
 tfidf_test=tfidfVectorizer.transform(x_test.values.astype('U'))
 
@@ -127,8 +128,59 @@ Passive Aggressive Algorithms:
 paclass=PassiveAggressiveClassifier(max_iter=50)
 paclass.fit(tfidf_train,y_train)
 
+# Predictions
+y_predPAC=paclass.predict(tfidf_test)
+pac_accuracy=accuracy_score(y_test,y_predPAC)
+print(f'Passive Aggressive Accuracy: {round(pac_accuracy*100,2)}%')
 
-y_pred=paclass.predict(tfidf_test)
-score=accuracy_score(y_test,y_pred)
-print(f'Accuracy: {round(score*100,2)}%')
+
+
+# Random Forest Classifier
+random_forest_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+random_forest_classifier.fit(tfidf_train, y_train)
+
+# Predictions
+y_predRF = random_forest_classifier.predict(tfidf_test)
+rf_accuracy = accuracy_score(y_test, y_predRF)
+print(f'Random Forest Accuracy: {round(rf_accuracy * 100, 2)}%')
+
+
+
+# SVM
+svm_classifier = LinearSVC()
+svm_classifier.fit(tfidf_train, y_train)
+
+# Predictions
+y_predSVM = svm_classifier.predict(tfidf_test)
+svm_accuracy = accuracy_score(y_test, y_predSVM)
+print(f'SVM Accuracy: {round(svm_accuracy * 100, 2)}%')
+
+
+
+# Logistic Regression
+logreg_model = LogisticRegression(max_iter=100)
+logreg_model.fit(tfidf_train, y_train)
+
+# Predictions
+y_predLR = logreg_model.predict(tfidf_test)
+logreg_accuracy = accuracy_score(y_test, y_predLR)
+print(f'Logistic Regression Accuracy: {round(logreg_accuracy * 100, 2)}%')
+
+
+
+'''
+dict_live = { 
+    0 : 'fake',
+    1 : 'true'
+}
+
+cm = confusion_matrix(y_test, y_pred)
+df_cm = pd.DataFrame(cm, index = [dict_live[i] for i in range(0,2)], columns = [dict_live[i] for i in range(0,2)])
+plt.figure(figsize = (7,7))
+sns.heatmap(df_cm, annot=True, cmap=plt.cm.Blues, fmt='g')
+plt.xlabel("Predicted Class", fontsize=18)
+plt.ylabel("True Class", fontsize=18)
+plt.title('Passive Aggressive Classifier', fontsize = 15)
+plt.show()
+'''
 
