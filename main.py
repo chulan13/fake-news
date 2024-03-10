@@ -1,4 +1,5 @@
 #importing libraries
+from flask import Flask, render_template, request
 import os
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 import seaborn as sns
@@ -8,6 +9,8 @@ from sklearn.linear_model import PassiveAggressiveClassifier, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, confusion_matrix
+
+app = Flask(__name__, template_folder='templates')
 
 
 #importing database
@@ -23,7 +26,7 @@ nan_rows = dataset[dataset.isna().any(axis=1)]
 
 #convert boolean values into binary for Fake News False --> 0, for True News True --> 1
 dataset['Label'] = dataset['Label'].astype(int)
-
+dataset['Text'] = dataset['Text'].str.lower()
 #count the amount of unique values
 label_counts = dataset['Label'].value_counts()
 
@@ -44,14 +47,18 @@ plt.xticks([0, 1], ['Fake', 'True'])
 plt.title('Distribution of Fake and True News')
 plt.show()
 '''
+# make the text lowercase, drop all special characters exception for apostroph
+
 
 #splitting into train and test
 true_false = dataset.Label
 x_train,x_test,y_train,y_test=train_test_split(dataset['Text'], true_false, test_size=0.2, random_state=7)
-print('x train=',len(x_train),
-      "\t",'x test=',len(x_test),
-      "\t",'y train=',len(y_train),
-      "\t",'y test=',len(y_test))
+
+
+# print('x train=',len(x_train),
+#       "\t",'x test=',len(x_test),
+#       "\t",'y train=',len(y_train),
+#       "\t",'y test=',len(y_test))
 
 
 file_path = 'fake-news/ukrainian'
@@ -64,7 +71,7 @@ else:
     print("File 'ukrainian' does not exist.")  
 
 stopwords = raw_ukr.split("\n")
-print(stopwords)
+# print(stopwords)
 
 # TfidfVectorizer - Term Frequency Inverse Document Frequency - an overall document weightage:
 #                   TF-IDF(t) = TF(t,d) * IDF(t)
@@ -92,6 +99,7 @@ TF-IDF = TF(t,d) * IDF(t),      where TF(t,d) is a number of times term 't' appe
 tfidfVectorizer = TfidfVectorizer(stop_words=stopwords,max_df=0.8,strip_accents=None)
 tfidf_train=tfidfVectorizer.fit_transform(x_train.values.astype('U')) 
 tfidf_test=tfidfVectorizer.transform(x_test.values.astype('U'))
+
 
 # PassiveAggressiveClassifier 
 '''
@@ -133,6 +141,63 @@ y_predPAC=paclass.predict(tfidf_test)
 pac_accuracy=accuracy_score(y_test,y_predPAC)
 print(f'Passive Aggressive Accuracy: {round(pac_accuracy*100,2)}%')
 
+misclassified_indices = np.where(y_test != y_predPAC)[0]
+misclassified_x = x_test.iloc[misclassified_indices]
+misclassified_y = y_test.iloc[misclassified_indices]
+
+# Add misclassified examples to training data
+x_train = pd.concat([x_train, misclassified_x])
+y_train = pd.concat([y_train, misclassified_y])
+
+# Retrain the model with the updated training data
+tfidf_train = tfidfVectorizer.transform(x_train.values.astype('U'))
+paclass.fit(tfidf_train, y_train)
+
+# Predictions after retraining
+y_pred_after_retrain = paclass.predict(tfidf_test)
+
+# Evaluate accuracy after retraining
+accuracy_after_retrain = accuracy_score(y_test, y_pred_after_retrain)
+print(f'Accuracy after Retraining: {round(accuracy_after_retrain * 100, 2)}%')
+
+# lets try this shit
+'''
+trying = input()
+trying = [trying]
+tfidf_try = tfidfVectorizer.transform(np.asarray(trying, dtype='U'))
+y_tryPAC=paclass.predict(tfidf_try)
+print(y_tryPAC)
+'''
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    user_input = request.form['user_input']
+
+    # Your existing code for processing user_input and making predictions
+
+
+    # Check if is not empty
+    if user_input.strip():  # if contains non-whitespace characters
+        user_text = [user_input]
+
+        # Convert into Unicode
+        tfidf_try = tfidfVectorizer.transform(np.asarray(user_text, dtype='U'))
+        y_tryPAC = paclass.predict(tfidf_try)
+
+        print(f'Predicted Label: {y_tryPAC}')
+    else:
+        print("lol wtf ziom")
+
+
+    return render_template('result.html', prediction=y_tryPAC)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 # Random Forest Classifier
@@ -166,15 +231,17 @@ y_predLR = logreg_model.predict(tfidf_test)
 logreg_accuracy = accuracy_score(y_test, y_predLR)
 print(f'Logistic Regression Accuracy: {round(logreg_accuracy * 100, 2)}%')
 
+predict_list = {
+
+}
 
 
-'''
 dict_live = { 
     0 : 'fake',
     1 : 'true'
 }
-
-cm = confusion_matrix(y_test, y_pred)
+'''
+cm = confusion_matrix(y_test, y_predPAC)
 df_cm = pd.DataFrame(cm, index = [dict_live[i] for i in range(0,2)], columns = [dict_live[i] for i in range(0,2)])
 plt.figure(figsize = (7,7))
 sns.heatmap(df_cm, annot=True, cmap=plt.cm.Blues, fmt='g')
