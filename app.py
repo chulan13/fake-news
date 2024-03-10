@@ -1,8 +1,7 @@
 #importing libraries
 from flask import Flask, render_template, request
 import os
-import numpy as np, pandas as pd, matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np, pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import PassiveAggressiveClassifier, LogisticRegression
@@ -14,7 +13,7 @@ app = Flask(__name__, template_folder='templates')
 
 
 #importing database
-dataset = pd.read_csv("fake-news/data_set_4.csv")
+dataset = pd.read_csv("data_set_4.csv")
 print(dataset.size)
 
 '''
@@ -61,7 +60,7 @@ x_train,x_test,y_train,y_test=train_test_split(dataset['Text'], true_false, test
 #       "\t",'y test=',len(y_test))
 
 
-file_path = 'fake-news/ukrainian'
+file_path = 'ukrainian'
 # Check if the file exists
 if os.path.isfile(file_path):
     with open(file_path, "r") as f:
@@ -69,7 +68,6 @@ if os.path.isfile(file_path):
         # print("Content of 'ukrainian' file:\n", vocabulary)
 else:
     print("File 'ukrainian' does not exist.")  
-
 stopwords = raw_ukr.split("\n")
 # print(stopwords)
 
@@ -178,26 +176,23 @@ def index():
 def predict():
     user_input = request.form['user_input']
 
-    # Your existing code for processing user_input and making predictions
-
-
     # Check if is not empty
-    if user_input.strip():  # if contains non-whitespace characters
+    if user_input.strip():
         user_text = [user_input]
 
         # Convert into Unicode
         tfidf_try = tfidfVectorizer.transform(np.asarray(user_text, dtype='U'))
         y_tryPAC = paclass.predict(tfidf_try)
+        if y_tryPAC==1:
+            t = "True"
+        else:
+            t = "False lol"
 
-        print(f'Predicted Label: {y_tryPAC}')
     else:
         print("lol wtf ziom")
-
-
-    return render_template('result.html', prediction=y_tryPAC)
-
+    return render_template('result.html', prediction=t)
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.environ.get('FLASK_DEBUG', False), host='0.0.0.0', port=80)
 
 
 # Random Forest Classifier
